@@ -2,6 +2,7 @@ import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_app/home/tasks/task_list_item.dart';
+import 'package:todo_app/provider/list_provider.dart';
 
 import '../../provider/app_config_provider.dart';
 
@@ -15,12 +16,18 @@ class _TaskListState extends State<TaskList> {
   Widget build(BuildContext context) {
     var provider = Provider.of<AppConfigProvider>(context);
     var isDarkMode = provider.isDarkMode();
+    var listProvider = Provider.of<ListProvider>(context);
+    if (listProvider.tasksList.isEmpty) {
+      listProvider.getAllTasksFromFireStore();
+    }
     return Column(
       children: [
         EasyDateTimeLine(
           locale: provider.appLanguage,
-          initialDate: DateTime.now(),
-          onDateChange: (selectedDate) {},
+          initialDate: listProvider.selectDate,
+          onDateChange: (selectedDate) {
+            listProvider.changeSelectDate(selectedDate);
+          },
           headerProps: EasyHeaderProps(
             monthPickerType: MonthPickerType.dropDown,
             dateFormatter: DateFormatter.fullDateDMonthAsStrY(),
@@ -54,9 +61,11 @@ class _TaskListState extends State<TaskList> {
         Expanded(
           child: ListView.builder(
             itemBuilder: (context, index) {
-              return TaskListItem();
+              return TaskListItem(
+                task: listProvider.tasksList[index],
+              );
             },
-            itemCount: 30,
+            itemCount: listProvider.tasksList.length,
           ),
         ),
       ],
