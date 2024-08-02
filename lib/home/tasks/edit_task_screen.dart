@@ -3,6 +3,8 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_color.dart';
+import '../../firebase_utils.dart';
+import '../../model/tasks.dart';
 import '../../provider/app_config_provider.dart';
 
 class EditTaskScreen extends StatefulWidget {
@@ -13,7 +15,26 @@ class EditTaskScreen extends StatefulWidget {
 }
 
 class _EditTaskScreenState extends State<EditTaskScreen> {
-  var selectedDate = DateTime.now();
+  late Task task;
+  late TextEditingController titleController;
+  late TextEditingController descriptionController;
+  DateTime selectedDate = DateTime.now();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    task = ModalRoute.of(context)!.settings.arguments as Task;
+    titleController = TextEditingController(text: task.title);
+    descriptionController = TextEditingController(text: task.description);
+    selectedDate = task.dateTime; // Assuming `dueDate` is a property of `Task`
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +67,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                           .blackDarkColor // Dark mode content background color
                       : AppColors.whiteColor,
                   // Light mode content background color
-                  borderRadius:
-                      BorderRadius.circular(16), // Added border radius
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   children: [
@@ -66,6 +86,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                           Padding(
                             padding: EdgeInsets.all(10.0),
                             child: TextFormField(
+                              controller: titleController,
                               decoration: InputDecoration(
                                 hintText: AppLocalizations.of(context)!.this_is,
                                 hintStyle: TextStyle(
@@ -79,6 +100,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                           Padding(
                             padding: EdgeInsets.all(10.0),
                             child: TextFormField(
+                              controller: descriptionController,
                               decoration: InputDecoration(
                                 hintText:
                                     AppLocalizations.of(context)!.task_detail,
@@ -132,10 +154,29 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: ElevatedButton(
-                              onPressed: () {},
+                              onPressed: () async {
+                                // Handle save logic here
+                                task.title = titleController.text;
+                                task.description = descriptionController.text;
+                                task.dateTime = selectedDate;
+                                // Update task in Firestore or local storage
+                                try {
+                                  await FirebaseUtils.updateTaskInFireStore(
+                                      task);
+                                  Navigator.pop(
+                                      context); // Navigate back after savin
+                                } catch (e) {
+                                  // Handle any errors
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content:
+                                          Text('Failed to update task: $e'),
+                                    ),
+                                  );
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 primary: AppColors.primaryColor,
-                                // Set the primary color
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(30),
                                 ),
@@ -165,10 +206,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   void showCalender() async {
     var chosenDate = await showDatePicker(
         context: context,
-        initialDate: DateTime.now(),
+        initialDate: selectedDate,
         firstDate: DateTime.now(),
         lastDate: DateTime.now().add(Duration(days: 365)));
-    selectedDate = chosenDate ?? selectedDate;
-    setState(() {});
+    if (chosenDate != null && chosenDate != selectedDate) {
+      setState(() {
+        selectedDate = chosenDate;
+      });
+    }
   }
 }

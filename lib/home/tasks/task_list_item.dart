@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_app/firebase_utils.dart';
+import 'package:todo_app/provider/list_provider.dart';
 
 import '../../app_color.dart';
+import '../../model/tasks.dart';
 import '../../provider/app_config_provider.dart';
 import 'edit_task_screen.dart';
 
 class TaskListItem extends StatelessWidget {
+  Task task;
+
+  TaskListItem({required this.task});
+
   @override
   Widget build(BuildContext context) {
     var provider = Provider.of<AppConfigProvider>(context);
+    var listProvider = Provider.of<ListProvider>(context);
     return Container(
       margin: EdgeInsets.all(12),
       child: Slidable(
@@ -25,7 +33,11 @@ class TaskListItem extends StatelessWidget {
             SlidableAction(
               borderRadius: BorderRadius.all(Radius.circular(10)),
               onPressed: (context) {
-                // delete task
+                FirebaseUtils.deleteTaskFromFireStore(task)
+                    .timeout(Duration(milliseconds: 500), onTimeout: () {
+                  print('Task deleted successfully');
+                  listProvider.getAllTasksFromFireStore();
+                });
               },
               backgroundColor: AppColors.redColor,
               foregroundColor: AppColors.whiteColor,
@@ -45,7 +57,8 @@ class TaskListItem extends StatelessWidget {
               borderRadius: BorderRadius.all(Radius.circular(10)),
               onPressed: (context) {
                 // edit task
-                Navigator.of(context).pushNamed(EditTaskScreen.routeName);
+                Navigator.of(context)
+                    .pushNamed(EditTaskScreen.routeName, arguments: task);
               },
               backgroundColor: AppColors.greenColor,
               foregroundColor: Colors.white,
@@ -67,9 +80,8 @@ class TaskListItem extends StatelessWidget {
             children: [
               Container(
                 margin: EdgeInsets.all(12),
-                color: provider.isDarkMode()
-                    ? AppColors.blackDarkColor
-                    : AppColors.whiteColor,
+                color:
+                    task.isDone ? AppColors.primaryColor : AppColors.greenColor,
                 height: MediaQuery.of(context).size.height * 0.1,
                 width: 2,
               ),
@@ -79,15 +91,19 @@ class TaskListItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      AppLocalizations.of(context)!.title,
+                      task.title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: AppColors.primaryColor,
+                            color: task.isDone
+                                ? AppColors.primaryColor
+                                : AppColors.greenColor,
                           ),
                     ),
                     Text(
-                      AppLocalizations.of(context)!.description,
+                      task.description,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primaryColor,
+                            color: task.isDone
+                                ? AppColors.primaryColor
+                                : AppColors.greenColor,
                           ),
                     ),
                   ],
@@ -96,16 +112,29 @@ class TaskListItem extends StatelessWidget {
               ElevatedButton(
                 style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.all<Color>(
-                    AppColors.primaryColor,
+                    task.isDone ? AppColors.primaryColor : AppColors.greenColor,
                   ),
-                  shape: MaterialStatePropertyAll<RoundedRectangleBorder>(
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                   ),
                 ),
-                onPressed: () {},
-                child: Icon(Icons.check, size: 30),
+                onPressed: !(task.isDone)
+                    ? null
+                    : () {
+                        task.isDone = !task.isDone;
+                        FirebaseUtils.updateTaskInFireStore(task).timeout(
+                            Duration(milliseconds: 500), onTimeout: () {
+                          listProvider.getAllTasksFromFireStore();
+                        });
+                      },
+                child: task.isDone
+                    ? Icon(Icons.check, size: 30)
+                    : Text(
+                        'Done',
+                        style: TextStyle(color: AppColors.whiteColor),
+                      ),
               )
             ],
           ),

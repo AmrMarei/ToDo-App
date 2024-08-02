@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_app/model/tasks.dart';
 
 import '../../app_color.dart';
+import '../../firebase_utils.dart';
 import '../../provider/app_config_provider.dart';
+import '../../provider/list_provider.dart';
 
 class AddTaskButtom extends StatefulWidget {
   @override
@@ -14,11 +17,13 @@ class _AddTaskButtomState extends State<AddTaskButtom> {
   var selectedDate = DateTime.now();
   var formKey = GlobalKey<FormState>();
   String title = '';
-  String Description = '';
+  String description = '';
+  late ListProvider listProvider;
 
   @override
   Widget build(BuildContext context) {
     var provider = Provider.of<AppConfigProvider>(context);
+    listProvider = Provider.of<ListProvider>(context);
     return Container(
       color: provider.isDarkMode()
           ? AppColors.blackDarkColor
@@ -65,7 +70,7 @@ class _AddTaskButtomState extends State<AddTaskButtom> {
                       padding: const EdgeInsets.all(10.0),
                       child: TextFormField(
                         onChanged: (text) {
-                          Description = text;
+                          description = text;
                         },
                         validator: (text) {
                           if (text == null || text.isEmpty) {
@@ -142,6 +147,18 @@ class _AddTaskButtomState extends State<AddTaskButtom> {
   }
 
   void addTask() {
-    if (formKey.currentState?.validate() == true) {}
+    if (formKey.currentState?.validate() == true) {
+      Task task = Task(
+          title: title,
+          description: description,
+          dateTime: selectedDate,
+          isDone: true);
+      FirebaseUtils.addTaskToFireStore(task).timeout(Duration(seconds: 1),
+          onTimeout: () {
+        print('task added successfully');
+        listProvider.getAllTasksFromFireStore();
+        Navigator.pop(context);
+      });
+    }
   }
 }
