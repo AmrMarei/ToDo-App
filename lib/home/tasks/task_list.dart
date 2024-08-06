@@ -2,6 +2,7 @@ import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_app/home/tasks/task_list_item.dart';
+import 'package:todo_app/provider/auth_user_provider.dart';
 import 'package:todo_app/provider/list_provider.dart';
 
 import '../../provider/app_config_provider.dart';
@@ -17,8 +18,9 @@ class _TaskListState extends State<TaskList> {
     var provider = Provider.of<AppConfigProvider>(context);
     var isDarkMode = provider.isDarkMode();
     var listProvider = Provider.of<ListProvider>(context);
+    var authProvider = Provider.of<AuthUserProvider>(context);
     if (listProvider.tasksList.isEmpty) {
-      listProvider.getAllTasksFromFireStore();
+      listProvider.getAllTasksFromFireStore(authProvider.currentUser!.id!);
     }
     return Column(
       children: [
@@ -26,7 +28,8 @@ class _TaskListState extends State<TaskList> {
           locale: provider.appLanguage,
           initialDate: listProvider.selectDate,
           onDateChange: (selectedDate) {
-            listProvider.changeSelectDate(selectedDate);
+            listProvider.changeSelectDate(
+                selectedDate, authProvider.currentUser!.id!);
           },
           headerProps: EasyHeaderProps(
             monthPickerType: MonthPickerType.dropDown,

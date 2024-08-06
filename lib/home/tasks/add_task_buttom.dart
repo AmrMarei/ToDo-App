@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_app/model/tasks.dart';
+import 'package:todo_app/provider/auth_user_provider.dart';
 
 import '../../app_color.dart';
 import '../../firebase_utils.dart';
@@ -153,10 +154,16 @@ class _AddTaskButtomState extends State<AddTaskButtom> {
           description: description,
           dateTime: selectedDate,
           isDone: true);
-      FirebaseUtils.addTaskToFireStore(task).timeout(Duration(seconds: 1),
-          onTimeout: () {
+
+      var authProvider = Provider.of<AuthUserProvider>(context, listen: false);
+      FirebaseUtils.addTaskToFireStore(task, authProvider.currentUser!.id!)
+          .then((value) {
         print('task added successfully');
-        listProvider.getAllTasksFromFireStore();
+        listProvider.getAllTasksFromFireStore(authProvider.currentUser!.id!);
+        Navigator.pop(context);
+      }).timeout(Duration(seconds: 1), onTimeout: () {
+        print('task added successfully');
+        listProvider.getAllTasksFromFireStore(authProvider.currentUser!.id!);
         Navigator.pop(context);
       });
     }

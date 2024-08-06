@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_app/provider/auth_user_provider.dart';
 
 import '../../app_color.dart';
 import '../../firebase_utils.dart';
@@ -39,6 +40,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   @override
   Widget build(BuildContext context) {
     var provider = Provider.of<AppConfigProvider>(context);
+    var authProvider = Provider.of<AuthUserProvider>(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.title_bar),
@@ -162,7 +164,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                                 // Update task in Firestore or local storage
                                 try {
                                   await FirebaseUtils.updateTaskInFireStore(
-                                      task);
+                                      task, authProvider.currentUser!.id!);
                                   Navigator.pop(
                                       context); // Navigate back after savin
                                 } catch (e) {
